@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MFA — Account Security · HelloFresh</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.3/babel.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body { background: #111; display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; }
+    #root { display: flex; align-items: center; justify-content: center; width: 100%; height: 100vh; }
+    input { -webkit-appearance: none; appearance: none; }
+    button { -webkit-tap-highlight-color: transparent; }
+    ::-webkit-scrollbar { width: 0; }
+    @keyframes pop { 0%{transform:scale(0);opacity:0} 60%{transform:scale(1.15)} 100%{transform:scale(1);opacity:1} }
+    @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+    @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useRef, useEffect, createContext, useContext } = React;
+
+const HF = {
+  cream: '#FAF8F3', elevated: '#EFE9DE', white: '#FFFFFF',
+  green: '#067A46', greenDark: '#055933', greenBg: 'rgba(6,122,70,0.08)',
+  textPrimary: '#1D1D1D', textSecondary: '#6B6B6B', textTertiary: '#9A9A9A',
+  border: 'rgba(0,0,0,0.08)', borderStrong: 'rgba(0,0,0,0.12)',
+  error: '#DC2626', errorBg: '#FEF2F2',
+};
+const GS = {
+  bg: '#F0EDE6', white: '#FFFFFF', green: '#2D7A3A',
+  text: '#1A1A1A', textMid: '#555', textLight: '#888',
+  border: '#CCCCCC', divider: '#E0DDD8', btnGrey: '#AAAAAA',
+  error: '#CC0000', inputBg: '#F8F6F0',
+};
+const sans = "'Inter', -apple-system, BlinkMacSystemFont, sans-serif";
+const agrandir = "'Georgia', 'Times New Roman', serif";
+
+const NavCtx = createContext(null);
+function useNav() { return useContext(NavCtx); }
+
+function CreamStatusBar() {
+  return (
+    <div style={{height:50,flexShrink:0,background:HF.elevated,display:'flex',alignItems:'flex-end',justifyContent:'space-between',padding:'0 16px 8px'}}>
+      <span style={{fontSize:17,fontWeight:600,color:HF.textPrimary}}>9:41</span>
+      <div style={{display:'flex',alignItems:'center',gap:5}}>
+        <svg width="17" height="12" viewBox="0 0 18 12" fill={HF.textPrimary}><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5" width="3" height="7" rx="1"/><rect x="10" y="2" width="3" height="10" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
+        <div style={{width:25,height:12,border:`1.5px solid ${HF.textPrimary}`,borderRadius:3,padding:2}}>
+          <div style={{width:'100%',height:'100%',background:HF.textPrimary,borderRadius:1}}/>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GreenStatusBar() {
+  return (
+    <div style={{height:44,flexShrink:0,background:GS.green,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 16px 0 20px'}}>
+      <span style={{fontFamily:sans,fontSize:15,fontWeight:600,color:'#fff'}}>9:41</span>
+      <div style={{display:'flex',alignItems:'center',gap:6}}>
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="white" opacity="0.9"><rect x="0" y="8" width="3" height="4" rx="0.5"/><rect x="4.5" y="5" width="3" height="7" rx="0.5"/><rect x="9" y="2" width="3" height="10" rx="0.5"/><rect x="13.5" y="0" width="2.5" height="12" rx="0.5" opacity="0.4"/></svg>
+        <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="3" stroke="white"/><rect x="2" y="2" width="17" height="8" rx="2" fill="white"/><path d="M23 4.5v3a1.5 1.5 0 0 0 0-3z" fill="white"/></svg>
+      </div>
+    </div>
+  );
+}
+
+function GreenHeader({ title, onBack }) {
+  return (
+    <div style={{height:56,flexShrink:0,background:GS.green,display:'flex',alignItems:'center',justifyContent:'center',padding:'0 16px',position:'relative'}}>
+      {onBack && <button onClick={onBack} style={{position:'absolute',left:16,background:'none',border:'none',cursor:'pointer',display:'flex',alignItems:'center'}}>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>}
+      <span style={{fontFamily:agrandir,fontSize:18,fontWeight:700,color:'#fff'}}>{title}</span>
+    </div>
+  );
+}
+
+function GreenInput({ label, value, onChange, bg = GS.bg }) {
+  const filled = value.length > 0;
+  return (
+    <div style={{position:'relative',width:'100%'}}>
+      <span style={{position:'absolute',left:12,top:-9,zIndex:1,background:bg,padding:'0 4px',fontFamily:sans,fontSize:12,color:GS.green,lineHeight:'18px'}}>{label}</span>
+      <div style={{display:'flex',alignItems:'center',border:`1.5px solid ${filled ? GS.green : GS.border}`,borderRadius:4,padding:'0 12px',height:52,background:GS.inputBg}}>
+        <input value={value} onChange={e=>onChange?.(e.target.value)} style={{flex:1,border:'none',outline:'none',background:'transparent',fontFamily:sans,fontSize:16,color:GS.text}}/>
+        {filled && <div style={{width:24,height:24,borderRadius:12,background:GS.green,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>}
+      </div>
+    </div>
+  );
+}
+
+function OtpBoxes({ otp, state, inputRefs, onChange, onKeyDown, onPaste, green, errorRed }) {
+  return (
+    <div style={{display:'flex',gap:10,justifyContent:'center',marginBottom:12}}>
+      {otp.map((digit, i) =>
+        state === 'success' ? (
+          <div key={i} style={{width:64,height:64,borderRadius:12,border:`2px solid ${green}`,background:`rgba(${green==='#067A46'?'6,122,70':'45,122,58'},0.08)`,display:'flex',alignItems:'center',justifyContent:'center'}}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={green} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+        ) : (
+          <input key={i} ref={el => { inputRefs.current[i] = el; }}
+            type="text" inputMode="numeric" maxLength={1} value={digit}
+            onChange={e => onChange(i, e.target.value)}
+            onKeyDown={e => onKeyDown(i, e)}
+            onPaste={i === 0 ? onPaste : undefined}
+            style={{
+              width:64,height:64,textAlign:'center',fontSize:24,fontWeight:700,fontFamily:sans,
+              color:(state==='error'||state==='expired') ? errorRed : '#1A1A1A',
+              borderRadius:12,
+              border:(state==='error'||state==='expired') ? `2px solid ${errorRed}` : '2px solid rgba(0,0,0,0.15)',
+              background:(state==='error'||state==='expired') ? '#FEF2F2' : '#fff',
+              outline:'none',transition:'border-color 0.15s',boxSizing:'border-box',
+            }}
+          />
+        )
+      )}
+    </div>
+  );
+}
+
+function ChannelSwitch({ channel, onSwitch }) {
+  return (
+    <div style={{marginTop:20,paddingTop:16,borderTop:'1px solid rgba(0,0,0,0.09)',width:'100%',textAlign:'center'}}>
+      <p style={{fontFamily:sans,fontSize:12,color:'#999',margin:'0 0 10px'}}>Prefer to verify another way?</p>
+      <button onClick={onSwitch} style={{background:'none',border:`1.5px solid ${GS.green}`,borderRadius:9,cursor:'pointer',fontFamily:sans,fontSize:13,fontWeight:600,color:GS.green,padding:'8px 18px',display:'inline-flex',alignItems:'center',gap:7}}>
+        {channel === 'sms' ? <>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          Verify over email
+        </> : <>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+          Verify over SMS
+        </>}
+      </button>
+    </div>
+  );
+}
+
+function Hub() {
+  const { goTo } = useNav();
+  const green = '#2D7A3A';
+  return (
+    <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',background:HF.cream,fontFamily:sans}}>
+      <div style={{height:44,flexShrink:0,display:'flex',alignItems:'center',padding:'0 20px',background:HF.cream}}>
+        <span style={{fontSize:15,fontWeight:600,color:HF.textPrimary}}>9:41</span>
+      </div>
+      <div style={{flex:1,display:'flex',flexDirection:'column',justifyContent:'center',padding:'0 24px 48px'}}>
+        <h1 style={{fontFamily:agrandir,fontSize:26,fontWeight:700,color:HF.textPrimary,margin:'0 0 6px'}}>MFA Prototype</h1>
+        <p style={{fontFamily:sans,fontSize:14,color:HF.textSecondary,margin:'0 0 40px',lineHeight:1.5}}>Select a flow to begin.</p>
+        <button onClick={() => goTo('ReactivationAddress')} style={{width:'100%',padding:'24px 20px',background:green,borderRadius:16,border:'none',textAlign:'left',cursor:'pointer',marginBottom:16,boxShadow:'0 4px 16px rgba(45,122,58,0.25)'}}>
+          <p style={{fontFamily:agrandir,fontSize:18,fontWeight:700,color:'#fff',margin:'0 0 6px'}}>Reactivation flow</p>
+          <p style={{fontFamily:sans,fontSize:13,color:'rgba(255,255,255,0.75)',margin:0,lineHeight:1.4}}>Verify identity during subscription reactivation</p>
+        </button>
+        <button onClick={() => goTo('AccountSettings')} style={{width:'100%',padding:'24px 20px',background:'#fff',borderRadius:16,border:'1.5px solid rgba(0,0,0,0.08)',textAlign:'left',cursor:'pointer',marginBottom:32,boxShadow:'0 2px 8px rgba(0,0,0,0.06)'}}>
+          <p style={{fontFamily:agrandir,fontSize:18,fontWeight:700,color:HF.textPrimary,margin:'0 0 6px'}}>Settings flow</p>
+          <p style={{fontFamily:sans,fontSize:13,color:HF.textSecondary,margin:0,lineHeight:1.4}}>Change address, email, or password from account settings</p>
+        </button>
+        <div style={{borderTop:'1px solid rgba(0,0,0,0.08)',paddingTop:20}}>
+          <p style={{fontFamily:sans,fontSize:11,fontWeight:700,color:HF.textSecondary,textTransform:'uppercase',letterSpacing:'0.6px',margin:'0 0 10px'}}>Verification codes</p>
+          <div style={{display:'flex',flexDirection:'column',gap:6}}>
+            {[{code:'1234',desc:'Correct — proceeds to success'},{code:'0000',desc:'Expired code error'},{code:'other',desc:'Wrong code error'}].map(({code,desc}) => (
+              <div key={code} style={{display:'flex',alignItems:'center',gap:10}}>
+                <span style={{fontFamily:sans,fontSize:13,fontWeight:700,color:HF.textPrimary,minWidth:36}}>{code}</span>
+                <span style={{fontFamily:sans,fontSize:13,color:HF.textSecondary}}>{desc}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AccountSettings() {
+  const { goTo } = useNav();
+  const rows = [
+    {label:'Plan settings',sub:'2 people · 3 meals/week',screen:'PlanSettings',icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,highlight:false},
+    {label:'Personal info',sub:'Name, email, password',screen:'PersonalInfo',icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,highlight:false},
+    {label:'Delivery address',sub:'25 Stanley Close, London',screen:'PlanSettings',icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>,highlight:true},
+    {label:'Payment method',sub:'Visa •••• 4242',screen:'',icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,highlight:false},
+  ];
+  return (
+    <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',background:GS.bg,overflow:'hidden'}}>
+      <GreenStatusBar/>
+      <GreenHeader title="Account" onBack={() => goTo('Hub')}/>
+      <div style={{padding:'20px 16px 8px'}}>
+        <div style={{background:'#fff',borderRadius:12,padding:16,display:'flex',alignItems:'center',gap:14,boxShadow:'0 1px 4px rgba(0,0,0,0.06)'}}>
+          <div style={{width:48,height:48,borderRadius:24,background:GS.green,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+            <span style={{fontFamily:agrandir,fontSize:18,fontWeight:700,color:'#fff'}}>F</span>
+          </div>
+          <div>
+            <p style={{fontFamily:agrandir,fontSize:16,fontWeight:700,color:GS.text,margin:0}}>Fiona Lucas</p>
+            <p style={{fontFamily:sans,fontSize:13,color:GS.textLight,margin:'2px 0 0'}}>fm@hellofresh.com</p>
+          </div>
+        </div>
+      </div>
+      <div style={{flex:1,overflowY:'auto',padding:'16px 16px 32px'}}>
+        <div style={{background:'#fff',borderRadius:12,overflow:'hidden',boxShadow:'0 1px 4px rgba(0,0,0,0.06)'}}>
+          {rows.map((row,i) => (
+            <button key={row.label} onClick={() => row.screen && goTo(row.screen)} style={{width:'100%',display:'flex',alignItems:'center',gap:14,padding:'14px 16px',background:row.highlight?'rgba(45,122,58,0.06)':'transparent',border:'none',borderBottom:i<rows.length-1?`1px solid ${HF.border}`:'none',cursor:row.screen?'pointer':'default',textAlign:'left'}}>
+              <div style={{width:36,height:36,borderRadius:18,background:row.highlight?'rgba(45,122,58,0.12)':'#f5f5f5',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,color:row.highlight?GS.green:'#888'}}>{row.icon}</div>
+              <div style={{flex:1}}>
+                <p style={{fontFamily:sans,fontSize:15,fontWeight:600,color:GS.text,margin:0}}>{row.label}</p>
+                <p style={{fontFamily:sans,fontSize:12,color:GS.textLight,margin:'2px 0 0'}}>{row.sub}</p>
+              </div>
+              {row.screen && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={row.highlight?GS.green:'#ccc'} strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PersonalInfo() {
+  const { goTo } = useNav();
+  const rows = [
+    {label:'First name',value:'Fiona',screen:''},
+    {label:'Last name',value:'Lucas',screen:''},
+    {label:'Email address',value:'fm@hellofresh.com',screen:'ChangeEmail'},
+    {label:'Password',value:'••••••••',screen:'ChangePassword'},
+  ];
+  return (
+    <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',background:GS.bg,overflow:'hidden'}}>
+      <GreenStatusBar/>
+      <GreenHeader title="Personal info" onBack={() => goTo('AccountSettings')}/>
+      <div style={{flex:1,overflowY:'auto',padding:'20px 16px 32px'}}>
+        <div style={{background:'#fff',borderRadius:12,overflow:'hidden',boxShadow:'0 1px 4px rgba(0,0,0,0.06)'}}>
+          {rows.map((row,i) => (
+            <div key={row.label} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 16px',borderBottom:i<rows.length-1?`1px solid ${HF.border}`:'none'}}>
+              <div>
+                <p style={{fontFamily:sans,fontSize:11,color:GS.textLight,margin:'0 0 2px',textTransform:'uppercase',letterSpacing:'0.4px'}}>{row.label}</p>
+                <p style={{fontFamily:sans,fontSize:15,color:GS.text,margin:0,fontWeight:500}}>{row.value}</p>
+              </div>
+              {row.screen && <button onClick={() => goTo(row.screen)} style={{background:'none',border:'none',fontFamily:sans,fontSize:14,fontWeight:700,color:GS.green,cursor:'pointer',padding:0}}>Change</button>}
+            </div>
+          ))}
+        </div>
+        <div style={{marginTop:20,background:'rgba(45,122,58,0.06)',borderRadius:12,padding:'14px 16px',border:'1px solid rgba(45,122,58,0.12)'}}>
+          <p style={{fontFamily:sans,fontSize:13,color:GS.green,margin:'0 0 4px',fontWeight:600}}>Account security</p>
+          <p style={{fontFamily:sans,fontSize:13,color:GS.text,margin:0,lineHeight:1.5}}>Changes to your email or password require a 4-digit verification code sent to your phone or email.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PlanSettings() {
+  const { goTo } = useNav();
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheetView, setSheetView] = useState('address');
+  const [displayAddress, setDisplayAddress] = useState('25 Stanley Close, London, SE92BA');
+  const [firstName, setFirstName] = useState('Fiona'); const [lastName, setLastName] = useState('Lucas');
+  const [street, setStreet] = useState('25 Stanley Close'); const [addr2, setAddr2] = useState('');
+  const [city, setCity] = useState('London'); const [postcode, setPostcode] = useState('SE92BA');
+  const [phone, setPhone] = useState('07570264316'); const [instructionNote, setInstructionNote] = useState('Leave at front door');
+  const hasChanges = firstName!=='Fiona'||lastName!=='Lucas'||street!=='25 Stanley Close'||city!=='London'||postcode!=='SE92BA'||phone!=='07570264316'||addr2!==''||instructionNote!=='Leave at front door';
+  const [otp, setOtp] = useState(['','','','']); const [mfaState, setMfaState] = useState('idle');
+  const [mfaChannel, setMfaChannel] = useState('sms'); const inputRefs = useRef([]);
+  useEffect(() => { if(sheetView==='mfa'&&sheetOpen) setTimeout(()=>inputRefs.current[0]?.focus(),120); },[sheetView,sheetOpen]);
+  const openSheet = () => { setSheetView('address'); setSheetOpen(true); };
+  const closeSheet = () => { setSheetOpen(false); setTimeout(()=>{ setSheetView('address'); setOtp(['','','','']); setMfaState('idle'); setMfaChannel('sms'); },320); };
+  const switchCh = () => { const n=mfaChannel==='sms'?'email':'sms'; setMfaChannel(n); setMfaState('idle'); setOtp(['','','','']); setTimeout(()=>inputRefs.current[0]?.focus(),50); };
+  const handleOtp = (i, val) => {
+    if(!/^\d*$/.test(val)) return;
+    if(mfaState==='error'||mfaState==='expired') setMfaState('idle');
+    const n=[...otp]; n[i]=val.slice(-1); setOtp(n);
+    if(val&&i<3) inputRefs.current[i+1]?.focus();
+    if(val&&i===3) setTimeout(()=>submit([...n.slice(0,3),val.slice(-1)].join('')),80);
+  };
+  const handleKd = (i,e) => { if(e.key==='Backspace'&&!otp[i]&&i>0) inputRefs.current[i-1]?.focus(); };
+  const handlePaste = e => { e.preventDefault(); const t=e.clipboardData.getData('text').replace(/\D/g,'').slice(0,4); if(t.length===4){const d=t.split('');setOtp(d);inputRefs.current[3]?.focus();setTimeout(()=>submit(t),80);} };
+  const submit = code => {
+    if(code==='1234'){setMfaState('success');setDisplayAddress(`${street}, ${city}, ${postcode}`);setTimeout(()=>closeSheet(),1400);}
+    else if(code==='0000'){setMfaState('expired');setOtp(['0','0','0','0']);}
+    else{setMfaState('error');setOtp(['','','','']);setTimeout(()=>inputRefs.current[0]?.focus(),50);}
+  };
+  const resend = () => { setMfaState('idle'); setOtp(['','','','']); setTimeout(()=>inputRefs.current[0]?.focus(),50); };
+
+  return (
+    <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',background:GS.bg,fontFamily:sans,overflow:'hidden'}}>
+      <GreenStatusBar/>
+      <GreenHeader title="Plans" onBack={() => goTo('AccountSettings')}/>
+      <div style={{flex:1,overflowY:'auto',padding:16}}>
+        <div style={{background:GS.bg,border:`1px solid ${GS.border}`,borderRadius:4,padding:'20px 16px',marginBottom:16}}>
+          <h2 style={{fontFamily:agrandir,fontSize:20,fontWeight:700,color:GS.text,margin:'0 0 20px'}}>Meal preferences</h2>
+          <div style={{display:'flex',flexDirection:'column',gap:6}}>
+            {[{l:'Price per serving',v:'£7.25'},{l:'Shipping',v:'£4.99'}].map(r=><div key={r.l} style={{display:'flex',justifyContent:'space-between'}}><span style={{fontSize:14,color:GS.text}}>{r.l}</span><span style={{fontSize:14,color:GS.text}}>{r.v}</span></div>)}
+            <div style={{display:'flex',justifyContent:'space-between',marginTop:4}}><span style={{fontSize:14,fontWeight:700,color:GS.text}}>Total</span><span style={{fontSize:14,fontWeight:700,color:GS.text}}>£33.98</span></div>
+          </div>
+        </div>
+        <div style={{background:GS.bg,border:`1px solid ${GS.border}`,borderRadius:4,padding:'20px 16px',marginBottom:16}}>
+          <h2 style={{fontFamily:agrandir,fontSize:20,fontWeight:700,color:GS.text,margin:'0 0 20px'}}>Delivery</h2>
+          <div style={{display:'flex',justifyContent:'space-between',paddingBottom:16,borderBottom:`1px solid ${GS.divider}`}}>
+            <div><p style={{fontSize:15,fontWeight:700,color:GS.text,margin:'0 0 4px'}}>Delivery window</p><p style={{fontSize:14,color:GS.textMid,margin:0}}>Sunday, 08:00 – 21:00</p></div>
+          </div>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',paddingTop:16}}>
+            <div><p style={{fontSize:15,fontWeight:700,color:GS.text,margin:'0 0 4px'}}>Delivery address</p><p style={{fontSize:14,color:GS.textMid,margin:0}}>{displayAddress}</p></div>
+            <button onClick={openSheet} style={{background:'none',border:'none',fontFamily:sans,fontSize:15,fontWeight:700,color:GS.text,cursor:'pointer',padding:0}}>Edit</button>
+          </div>
+        </div>
+        <div style={{background:GS.bg,border:`1px solid ${GS.border}`,borderRadius:4,padding:'20px 16px'}}>
+          <h2 style={{fontFamily:agrandir,fontSize:20,fontWeight:700,color:GS.text,margin:'0 0 16px'}}>Payment method</h2>
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            <div style={{width:40,height:26,background:'#1A1FCF',borderRadius:4,display:'flex',alignItems:'center',justifyContent:'center'}}><span style={{fontSize:9,fontWeight:700,color:'#fff'}}>VISA</span></div>
+            <span style={{fontSize:15,color:GS.text}}>•••• 4242</span>
+          </div>
+        </div>
+      </div>
+
+      {sheetOpen && <div onClick={closeSheet} style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.45)',zIndex:50}}/>}
+      <div style={{position:'absolute',bottom:0,left:0,right:0,zIndex:51,background:GS.bg,borderRadius:'16px 16px 0 0',transform:sheetOpen?'translateY(0)':'translateY(100%)',transition:'transform 0.32s cubic-bezier(0.32,0.72,0,1)',maxHeight:'92%',display:'flex',flexDirection:'column'}}>
+        <div style={{display:'flex',justifyContent:'center',padding:'10px 0 0'}}><div style={{width:40,height:4,borderRadius:2,background:GS.border}}/></div>
+        {sheetView==='address' && <>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 16px 12px'}}>
+            <h3 style={{fontFamily:agrandir,fontSize:18,fontWeight:700,color:GS.text,margin:0}}>Change your delivery address</h3>
+            <button onClick={closeSheet} style={{background:'none',border:'none',cursor:'pointer',padding:4}}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={GS.text} strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+          <div style={{flex:1,overflowY:'auto',padding:'8px 16px 24px',display:'flex',flexDirection:'column',gap:18}}>
+            <div style={{display:'flex',gap:12}}><GreenInput label="First name *" value={firstName} onChange={setFirstName}/><GreenInput label="Last name *" value={lastName} onChange={setLastName}/></div>
+            <GreenInput label="Street *" value={street} onChange={setStreet}/>
+            <GreenInput label="City *" value={city} onChange={setCity}/>
+            <GreenInput label="Postcode *" value={postcode} onChange={setPostcode}/>
+            <GreenInput label="Phone number *" value={phone} onChange={setPhone}/>
+            <GreenInput label="Delivery instructions" value={instructionNote} onChange={setInstructionNote}/>
+            <p style={{fontFamily:sans,fontSize:13,color:GS.textMid,textAlign:'center',margin:'4px 0'}}>Changes will affect all deliveries starting <strong>Sun, May 3</strong></p>
+          </div>
+          <div style={{display:'flex',gap:12,padding:'12px 16px 24px',borderTop:`1px solid ${GS.divider}`}}>
+            <button onClick={closeSheet} style={{flex:1,height:48,background:'none',border:'none',fontFamily:sans,fontSize:16,fontWeight:700,color:GS.text,cursor:'pointer'}}>Cancel</button>
+            <button onClick={() => hasChanges && setSheetView('mfa')} style={{flex:1,height:48,background:hasChanges?GS.green:GS.btnGrey,border:'none',borderRadius:8,fontFamily:sans,fontSize:16,fontWeight:700,color:'#fff',cursor:hasChanges?'pointer':'default',transition:'background 0.15s'}}>Save</button>
+          </div>
+        </>}
+        {sheetView==='mfa' && <>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 16px 12px'}}>
+            <button onClick={()=>{setSheetView('address');setOtp(['','','','']);setMfaState('idle');setMfaChannel('sms');}} style={{background:'none',border:'none',cursor:'pointer',display:'flex',alignItems:'center'}}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={GS.text} strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <h3 style={{fontFamily:agrandir,fontSize:18,fontWeight:700,color:GS.text,margin:0}}>{mfaChannel==='sms'?'Verify your phone':'Verify your email'}</h3>
+            <button onClick={closeSheet} style={{background:'none',border:'none',cursor:'pointer',padding:4}}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={GS.text} strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+          <div style={{flex:1,overflowY:'auto',padding:'8px 24px 32px',display:'flex',flexDirection:'column',alignItems:'center',textAlign:'center'}}>
+            {mfaState!=='success' && <div style={{width:44,height:44,borderRadius:22,background:'rgba(45,122,58,0.1)',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:12}}>
+              {mfaChannel==='sms'
+                ? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={GS.green} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+                : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={GS.green} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              }
+            </div>}
+            {mfaState==='success' && <div style={{width:56,height:56,borderRadius:28,background:'rgba(45,122,58,0.1)',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:16,animation:'pop 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards'}}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={GS.green} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>}
+            <p style={{fontFamily:sans,fontSize:15,color:GS.text,margin:'0 0 12px',lineHeight:'22px'}}>
+              {mfaState==='success'?'Your address has been updated successfully.'
+                :mfaChannel==='sms'?<>Enter the 4-digit code sent to <strong>+44 •••• ••7821</strong></>
+                :<>Enter the 4-digit code sent to <strong>f*****@hellofresh.com</strong></>}
+            </p>
+            <OtpBoxes otp={otp} state={mfaState} inputRefs={inputRefs} onChange={handleOtp} onKeyDown={handleKd} onPaste={handlePaste} green={GS.green} errorRed={GS.error}/>
+            {mfaState==='error' && <p style={{fontFamily:sans,fontSize:14,color:GS.error,margin:'4px 0 12px'}}>That code isn't right. Try again.</p>}
+            {mfaState==='expired' && <p style={{fontFamily:sans,fontSize:14,color:GS.error,margin:'4px 0 12px'}}>Your verification code is expired. Resend a new one.</p>}
+            <div style={{marginTop:4}}>
+              {mfaState==='idle' && <p style={{fontFamily:sans,fontSize:13,color:GS.textLight,margin:0}}>Didn't receive the code? Resend in 00:30</p>}
+              {(mfaState==='error'||mfaState==='expired') && <button onClick={resend} style={{background:'none',border:'none',cursor:'pointer',fontFamily:sans,fontSize:14,fontWeight:700,color:GS.text}}>Resend a new code</button>}
+            </div>
+            {mfaState!=='success' && <ChannelSwitch channel={mfaChannel} onSwitch={switchCh}/>}
+          </div>
+        </>}
+      </div>
+    </div>
+  );
+}
+
+function ChangeEmail() {
+  const { goTo } = useNav();
+  const [password, setPassword] = useState(''); const [email, setEmail] = useState('fm@hellofresh.com'); const [showPw, setShowPw] = useState(false);
+  const isValid = password.length > 0 && email.includes('@');
+  return (
+    <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',background:GS.bg,fontFamily:sans,overflow:'hidden'}}>
+      <GreenStatusBar/>
+      <GreenHeader title="Change Email" onBack={() => goTo('PersonalInfo')}/>
+      <div style={{flex:1,overflowY:'auto',padding:'24px 16px 32px',display:'flex',flexDirection:'column',gap:16}}>
+        <div style={{display:'flex',alignItems:'center',border:`1px solid ${GS.border}`,borderRadius:4,padding:'0 14px',height:52,background:GS.inputBg}}>
+          <input type={showPw?'text':'password'} placeholder="Please type your current password" value={password} onChange={e=>setPassword(e.target.value)} style={{flex:1,border:'none',outline:'none',background:'transparent',fontFamily:sans,fontSize:15,color:GS.text}}/>
+          <button onClick={() => setShowPw(s=>!s)} style={{background:'none',border:'none',cursor:'pointer',padding:0,display:'flex',alignItems:'center'}}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={GS.text} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              {showPw ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></> : <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></>}
+            </svg>
+          </button>
+        </div>
+        <div style={{position:'relative'}}>
+          <span style={{position:'absolute',left:12,top:-9,zIndex:1,background:GS.bg,padding:'0 4px',fontFamily:sans,fontSize:12,color:GS.text,lineHeight:'18px'}}>Please type in your new Email</span>
+          <input type="email" value={email} onChange={e=>setEmail(e.target.value)} style={{width:'100%',height:52,border:`1px solid ${GS.border}`,borderRadius:4,padding:'0 14px',background:GS.inputBg,fontFamily:sans,fontSize:16,color:GS.text,outline:'none',boxSizing:'border-box'}}/>
+        </div>
+        <button onClick={() => isValid && goTo('MfaVerify', {reason:'email_change',context:'account_settings',returnScreen:'AccountSettings',returnSuccess:'email'})} style={{width:'100%',height:52,background:isValid?GS.green:GS.btnGrey,border:'none',borderRadius:8,fontFamily:sans,fontSize:16,fontWeight:700,color:'#fff',cursor:isValid?'pointer':'default',transition:'background 0.15s'}}>Change Email</button>
+      </div>
+    </div>
+  );
+}
+
+function ChangePassword() {
+  const { goTo } = useNav();
+  const [current, setCurrent] = useState(''); const [newPw, setNewPw] = useState(''); const [confirm, setConfirm] = useState('');
+  const [show0, setShow0] = useState(false); const [show1, setShow1] = useState(false); const [show2, setShow2] = useState(false);
+  const isValid = current.length > 0 && newPw.length >= 8 && newPw === confirm;
+  const PwField = ({label,value,onChange,show,onToggle}) => (
+    <div style={{position:'relative'}}>
+      <span style={{position:'absolute',left:12,top:-9,zIndex:1,background:GS.bg,padding:'0 4px',fontFamily:sans,fontSize:12,color:GS.textLight,lineHeight:'18px'}}>{label}</span>
+      <div style={{display:'flex',alignItems:'center',border:`1px solid ${GS.border}`,borderRadius:4,padding:'0 14px',height:52,background:GS.inputBg}}>
+        <input type={show?'text':'password'} value={value} onChange={e=>onChange(e.target.value)} style={{flex:1,border:'none',outline:'none',background:'transparent',fontFamily:sans,fontSize:16,color:GS.text}}/>
+        <button onClick={onToggle} style={{background:'none',border:'none',cursor:'pointer',padding:0,display:'flex'}}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={GS.text} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            {show ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></> : <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></>}
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+  return (
+    <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',background:GS.bg,fontFamily:sans,overflow:'hidden'}}>
+      <GreenStatusBar/>
+      <GreenHeader title="Change Password" onBack={() => goTo('PersonalInfo')}/>
+      <div style={{flex:1,overflowY:'auto',padding:'24px 16px 32px',display:'flex',flexDirection:'column',gap:20}}>
+        <PwField label="Current password" value={current} onChange={setCurrent} show={show0} onToggle={()=>setShow0(s=>!s)}/>
+        <PwField label="New password" value={newPw} onChange={setNewPw} show={show1} onToggle={()=>setShow1(s=>!s)}/>
+        <PwField label="Confirm new password" value={confirm} onChange={setConfirm} show={show2} onToggle={()=>setShow2(s=>!s)}/>
+        <button onClick={() => isValid && goTo('MfaVerify', {reason:'password_change',context:'account_settings',returnScreen:'AccountSettings',returnSuccess:'password'})} style={{width:'100%',height:52,background:isValid?GS.green:GS.btnGrey,border:'none',borderRadius:8,fontFamily:sans,fontSize:16,fontWeight:700,color:'#fff',cursor:isValid?'pointer':'default',transition:'background 0.15s',marginTop:8}}>Change Password</button>
+      </div>
+    </div>
+  );
+}
+
+function MfaVerify() {
+  const { goTo, params } = useNav();
+  const reason = params.reason || 'address_change';
+  const returnScreen = params.returnScreen || 'Hub';
+  const returnSuccess = params.returnSuccess || null;
+  const backScreenMap = {account_settings_email_change:'ChangeEmail',account_settings_password_change:'ChangePassword'};
+  const backScreen = backScreenMap[`${params.context||'account_settings'}_${reason}`] || 'Hub';
+  const actionCopy = {address_change:'changing your delivery address',email_change:'changing your email address',password_change:'changing your password'}[reason] || 'making this change';
+
+  const [otp, setOtp] = useState(['','','','']); const [state, setState] = useState('idle');
+  const [channel, setChannel] = useState('sms'); const inputRefs = useRef([]);
+  useEffect(() => { inputRefs.current[0]?.focus(); },[]);
+
+  const switchCh = () => { const n=channel==='sms'?'email':'sms'; setChannel(n); setState('idle'); setOtp(['','','','']); setTimeout(()=>inputRefs.current[0]?.focus(),50); };
+  const handleChange = (i, val) => {
+    if(!/^\d*$/.test(val)) return;
+    if(state==='error'||state==='expired') setState('idle');
+    const n=[...otp]; n[i]=val.slice(-1); setOtp(n);
+    if(val&&i<3) inputRefs.current[i+1]?.focus();
+    if(val&&i===3) setTimeout(()=>submit([...n.slice(0,3),val.slice(-1)].join('')),80);
+  };
+  const handleKd = (i,e) => { if(e.key==='Backspace'&&!otp[i]&&i>0) inputRefs.current[i-1]?.focus(); };
+  const handlePaste = e => { e.preventDefault(); const t=e.clipboardData.getData('text').replace(/\D/g,'').slice(0,4); if(t.length===4){const d=t.split('');setOtp(d);inputRefs.current[3]?.focus();setTimeout(()=>submit(t),80);} };
+  const submit = code => {
+    if(code==='1234'){setState('success');setTimeout(()=>goTo(returnScreen,returnSuccess?{success:returnSuccess}:{}),1200);}
+    else if(code==='0000'){setState('expired');setOtp(['0','0','0','0']);}
+    else{setState('error');setOtp(['','','','']);setTimeout(()=>inputRefs.current[0]?.focus(),50);}
+  };
+  const resend = () => { setState('idle'); setOtp(['','','','']); setTimeout(()=>inputRefs.current[0]?.focus(),50); };
+
+  return (
+    <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',background:HF.cream,fontFamily:sans,overflow:'hidden'}}>
+      <CreamStatusBar/>
+      <div style={{height:44,flexShrink:0,display:'flex',alignItems:'center',padding:'0 16px'}}>
+        <button onClick={() => goTo(backScreen)} style={{background:'none',border:'none',cursor:'pointer',display:'flex',alignItems:'center',gap:2,color:HF.green,fontSize:15,fontWeight:600,fontFamily:sans}}>
+          <svg width="10" height="18" viewBox="0 0 10 18" fill="none" stroke={HF.green} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 1L1 9l8 8"/></svg>
+          Back
+        </button>
+      </div>
+      <div style={{flex:1,overflowY:'auto',padding:'12px 16px 32px',display:'flex',flexDirection:'column'}}>
+        <p style={{fontSize:14,color:HF.textSecondary,margin:'0 0 20px',lineHeight:1.5}}>To keep your account secure, we need to verify your identity before {actionCopy}.</p>
+        <div style={{background:HF.white,borderRadius:20,padding:'24px 20px 28px',boxShadow:'0 2px 16px rgba(0,0,0,0.08)',textAlign:'center',position:'relative'}}>
+          <button onClick={() => goTo(backScreen)} style={{position:'absolute',top:16,right:16,width:28,height:28,background:'none',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',color:HF.textPrimary}}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+          {state!=='success' && <div style={{width:48,height:48,borderRadius:24,background:HF.greenBg,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 16px'}}>
+            {channel==='sms'
+              ? <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={HF.green} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+              : <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={HF.green} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            }
+          </div>}
+          {state==='success' && <div style={{width:64,height:64,borderRadius:32,background:HF.greenBg,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 16px',animation:'pop 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards'}}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={HF.green} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>}
+          <h3 style={{fontFamily:sans,fontSize:16,fontWeight:700,color:HF.textPrimary,margin:'0 0 8px'}}>
+            {state==='success'?'Verified successfully.':channel==='sms'?'Verify your phone number':'Verify your email'}
+          </h3>
+          {state!=='success' && <p style={{fontSize:14,color:HF.textSecondary,margin:'0 0 20px',lineHeight:1.4}}>
+            {channel==='sms'?<>Enter the 4-digit code we sent over SMS to <strong style={{color:HF.textPrimary}}>+44 7911 123456</strong></>:<>Enter the 4-digit code we sent to <strong style={{color:HF.textPrimary}}>f*****@hellofresh.com</strong></>}
+          </p>}
+          <OtpBoxes otp={otp} state={state} inputRefs={inputRefs} onChange={handleChange} onKeyDown={handleKd} onPaste={handlePaste} green={HF.green} errorRed={HF.error}/>
+          {state==='success' && <p style={{fontSize:14,color:HF.textSecondary,margin:'8px 0 0'}}>{channel==='sms'?'Your phone number has been verified.':'Your email has been verified.'}</p>}
+          {state==='error' && <p style={{fontSize:14,color:HF.error,margin:'4px 0 12px',fontWeight:500}}>That code isn't right. Try again.</p>}
+          {state==='expired' && <p style={{fontSize:14,color:HF.error,margin:'4px 0 12px',fontWeight:500}}>Your verification code is expired. Resend a new one.</p>}
+          {state!=='success' && <div style={{marginTop:state==='idle'?4:0}}>
+            {state==='idle'?<p style={{fontSize:13,color:HF.textTertiary,margin:0}}>Didn't receive the code? Resend in 00:30</p>
+              :<button onClick={resend} style={{background:'none',border:'none',cursor:'pointer',fontSize:14,fontWeight:700,color:HF.textPrimary,fontFamily:sans,padding:0}}>Resend a new code</button>}
+          </div>}
+          {state!=='success' && <ChannelSwitch channel={channel} onSwitch={switchCh}/>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReactivationAddress() {
+  const { goTo } = useNav();
+  const [sheetOpen, setSheetOpen] = useState(false); const [sheetView, setSheetView] = useState('address');
+  const [displayStreet, setDisplayStreet] = useState('18 Maple Street'); const [displayCity, setDisplayCity] = useState('Berlin, 10115');
+  const [firstName, setFirstName] = useState('Fiona'); const [lastName, setLastName] = useState('Lucas');
+  const [street, setStreet] = useState('18 Maple Street'); const [addr2, setAddr2] = useState('');
+  const [city, setCity] = useState('Berlin'); const [postcode, setPostcode] = useState('10115');
+  const [phone, setPhone] = useState('07570264316'); const [instructionNote, setInstructionNote] = useState('Leave at front door');
+  const hasChanges = firstName!=='Fiona'||lastName!=='Lucas'||street!=='18 Maple Street'||city!=='Berlin'||postcode!=='10115'||phone!=='07570264316'||addr2!==''||instructionNote!=='Leave at front door';
+  const [otp, setOtp] = useState(['','','','']); const [mfaState, setMfaState] = useState('idle');
+  const [mfaChannel, setMfaChannel] = useState('sms'); const inputRefs = useRef([]);
+  useEffect(() => { if(sheetView==='mfa'&&sheetOpen) setTimeout(()=>inputRefs.current[0]?.focus(),120); },[sheetView,sheetOpen]);
+  const openSheet = () => { setSheetView('address'); setSheetOpen(true); };
+  const closeSheet = () => { setSheetOpen(false); setTimeout(()=>{ setSheetView('address'); setOtp(['','','','']); setMfaState('idle'); setMfaChannel('sms'); },320); };
+  const switchCh = () => { const n=mfaChannel==='sms'?'email':'sms'; setMfaChannel(n); setMfaState('idle'); setOtp(['','','','']); setTimeout(()=>inputRefs.current[0]?.focus(),50); };
+  const handleOtp = (i,val) => {
+    if(!/^\d*$/.test(val)) return;
+    if(mfaState==='error'||mfaState==='expired') setMfaState('idle');
+    const n=[...otp]; n[i]=val.slice(-1); setOtp(n);
+    if(val&&i<3) inputRefs.current[i+1]?.focus();
+    if(val&&i===3) setTimeout(()=>submit([...n.slice(0,3),val.slice(-1)].join('')),80);
+  };
+  const handleKd = (i,e) => { if(e.key==='Backspace'&&!otp[i]&&i>0) inputRefs.current[i-1]?.focus(); };
+  const handlePaste = e => { e.preventDefault(); const t=e.clipboardData.getData('text').replace(/\D/g,'').slice(0,4); if(t.length===4){const d=t.split('');setOtp(d);inputRefs.current[3]?.focus();setTimeout(()=>submit(t),80);} };
+  const submit = code => {
+    if(code==='1234'){setMfaState('success');setDisplayStreet(street);setDisplayCity(`${city}, ${postcode}`);setTimeout(()=>closeSheet(),1400);}
+    else if(code==='0000'){setMfaState('expired');setOtp(['0','0','0','0']);}
+    else{setMfaState('error');setOtp(['','','','']);setTimeout(()=>inputRefs.current[0]?.focus(),50);}
+  };
+  const resend = () => { setMfaState('idle'); setOtp(['','','','']); setTimeout(()=>inputRefs.current[0]?.focus(),50); };
+  const green = HF.green; const bg = HF.cream;
+
+  return (
+    <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',background:bg,fontFamily:sans,overflow:'hidden'}}>
+      <CreamStatusBar/>
+      <div style={{height:44,flexShrink:0,background:HF.elevated,display:'flex',alignItems:'center',padding:'0 16px'}}>
+        <button onClick={() => goTo('Hub')} style={{background:'none',border:'none',cursor:'pointer',display:'flex',alignItems:'center',gap:4,color:green,fontSize:15,fontWeight:600,fontFamily:sans}}>
+          <svg width="9" height="16" viewBox="0 0 10 18" fill="none" stroke={green} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 1L1 9l8 8"/></svg>Back
+        </button>
+      </div>
+      <div style={{flex:1,overflowY:'auto',padding:'20px 16px 120px'}}>
+        <h1 style={{fontFamily:agrandir,fontSize:24,fontWeight:700,color:HF.textPrimary,margin:'0 0 4px'}}>Reactivate your plan</h1>
+        <p style={{fontSize:14,color:HF.textSecondary,margin:'0 0 24px'}}>Review your details before reactivating.</p>
+        <div style={{background:'#fff',border:`1px solid ${HF.borderStrong}`,borderRadius:12,padding:'20px 16px',marginBottom:16,boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+            <h2 style={{fontFamily:agrandir,fontSize:17,fontWeight:700,color:HF.textPrimary,margin:0}}>Your plan</h2>
+            <span style={{fontSize:13,color:green,fontWeight:700}}>Paused</span>
+          </div>
+          {[{l:'Plan',v:'2 people · 3 meals/week'},{l:'Price per serving',v:'€7.99'},{l:'Shipping',v:'€3.99'}].map(r=>(
+            <div key={r.l} style={{display:'flex',justifyContent:'space-between',marginBottom:8}}><span style={{fontSize:14,color:HF.textSecondary}}>{r.l}</span><span style={{fontSize:14,color:HF.textPrimary,fontWeight:500}}>{r.v}</span></div>
+          ))}
+          <div style={{borderTop:`1px solid ${HF.border}`,marginTop:8,paddingTop:10,display:'flex',justifyContent:'space-between'}}>
+            <span style={{fontSize:14,fontWeight:700,color:HF.textPrimary}}>Total</span><span style={{fontSize:14,fontWeight:700,color:HF.textPrimary}}>€31.95/week</span>
+          </div>
+        </div>
+        <div style={{background:'#fff',border:`1px solid ${HF.borderStrong}`,borderRadius:12,padding:'20px 16px',marginBottom:16,boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
+          <h2 style={{fontFamily:agrandir,fontSize:17,fontWeight:700,color:HF.textPrimary,margin:'0 0 14px'}}>Delivery</h2>
+          <div style={{paddingBottom:14,borderBottom:`1px solid ${HF.border}`}}>
+            <p style={{fontSize:14,fontWeight:600,color:HF.textPrimary,margin:'0 0 2px'}}>Delivery window</p>
+            <p style={{fontSize:13,color:HF.textSecondary,margin:0}}>Thursday, 08:00 – 22:00</p>
+          </div>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',paddingTop:14}}>
+            <div><p style={{fontSize:14,fontWeight:600,color:HF.textPrimary,margin:'0 0 2px'}}>Delivery address</p><p style={{fontSize:13,color:HF.textSecondary,margin:0}}>{displayStreet}</p><p style={{fontSize:13,color:HF.textSecondary,margin:0}}>{displayCity}</p></div>
+            <button onClick={openSheet} style={{background:'none',border:'none',fontSize:14,fontWeight:700,color:green,cursor:'pointer',padding:0,fontFamily:sans}}>Change</button>
+          </div>
+        </div>
+        <div style={{background:'#fff',border:`1px solid ${HF.borderStrong}`,borderRadius:12,padding:'20px 16px',boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
+          <h2 style={{fontFamily:agrandir,fontSize:17,fontWeight:700,color:HF.textPrimary,margin:'0 0 14px'}}>Payment</h2>
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            <div style={{width:40,height:26,background:'#1A1FCF',borderRadius:4,display:'flex',alignItems:'center',justifyContent:'center'}}><span style={{fontSize:9,fontWeight:700,color:'#fff'}}>VISA</span></div>
+            <span style={{fontSize:14,color:HF.textPrimary}}>•••• 4242</span>
+          </div>
+        </div>
+      </div>
+      <div style={{position:'absolute',bottom:0,left:0,right:0,background:bg,borderTop:`1px solid ${HF.border}`,padding:'16px 16px 32px'}}>
+        <button style={{width:'100%',height:52,borderRadius:14,background:green,color:'#fff',fontSize:16,fontWeight:700,fontFamily:sans,border:'none',cursor:'pointer'}}>Reactivate now</button>
+      </div>
+
+      {sheetOpen && <div onClick={closeSheet} style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.45)',zIndex:50}}/>}
+      <div style={{position:'absolute',bottom:0,left:0,right:0,zIndex:51,background:bg,borderRadius:'16px 16px 0 0',transform:sheetOpen?'translateY(0)':'translateY(100%)',transition:'transform 0.32s cubic-bezier(0.32,0.72,0,1)',maxHeight:'92%',display:'flex',flexDirection:'column'}}>
+        <div style={{display:'flex',justifyContent:'center',padding:'10px 0 0'}}><div style={{width:40,height:4,borderRadius:2,background:'rgba(0,0,0,0.12)'}}/></div>
+        {sheetView==='address' && <>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 16px 12px'}}>
+            <h3 style={{fontFamily:agrandir,fontSize:18,fontWeight:700,color:HF.textPrimary,margin:0}}>Change your delivery address</h3>
+            <button onClick={closeSheet} style={{background:'none',border:'none',cursor:'pointer',padding:4}}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={HF.textPrimary} strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+          <div style={{flex:1,overflowY:'auto',padding:'8px 16px 24px',display:'flex',flexDirection:'column',gap:18}}>
+            <div style={{display:'flex',gap:12}}>
+              <GreenInput label="First name *" value={firstName} onChange={setFirstName} bg={bg}/>
+              <GreenInput label="Last name *" value={lastName} onChange={setLastName} bg={bg}/>
+            </div>
+            <GreenInput label="Street *" value={street} onChange={setStreet} bg={bg}/>
+            <GreenInput label="City *" value={city} onChange={setCity} bg={bg}/>
+            <GreenInput label="Postcode *" value={postcode} onChange={setPostcode} bg={bg}/>
+            <GreenInput label="Phone number *" value={phone} onChange={setPhone} bg={bg}/>
+            <GreenInput label="Delivery instructions" value={instructionNote} onChange={setInstructionNote} bg={bg}/>
+            <p style={{fontSize:13,color:HF.textSecondary,textAlign:'center',margin:'4px 0'}}>Changes will affect all deliveries from your next box.</p>
+          </div>
+          <div style={{display:'flex',gap:12,padding:'12px 16px 32px',borderTop:`1px solid ${HF.border}`}}>
+            <button onClick={closeSheet} style={{flex:1,height:48,background:'none',border:'none',fontFamily:sans,fontSize:16,fontWeight:700,color:HF.textPrimary,cursor:'pointer'}}>Cancel</button>
+            <button onClick={() => hasChanges && setSheetView('mfa')} style={{flex:1,height:48,background:hasChanges?green:'#C8C8C8',border:'none',borderRadius:8,fontFamily:sans,fontSize:16,fontWeight:700,color:'#fff',cursor:hasChanges?'pointer':'default',transition:'background 0.15s'}}>Save</button>
+          </div>
+        </>}
+        {sheetView==='mfa' && <>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 16px 12px'}}>
+            <button onClick={()=>{setSheetView('address');setOtp(['','','','']);setMfaState('idle');setMfaChannel('sms');}} style={{background:'none',border:'none',cursor:'pointer',display:'flex',alignItems:'center'}}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={HF.textPrimary} strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <h3 style={{fontFamily:agrandir,fontSize:18,fontWeight:700,color:HF.textPrimary,margin:0}}>{mfaChannel==='sms'?'Verify your phone':'Verify your email'}</h3>
+            <button onClick={closeSheet} style={{background:'none',border:'none',cursor:'pointer',padding:4}}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={HF.textPrimary} strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+          <div style={{flex:1,overflowY:'auto',padding:'8px 24px 32px',display:'flex',flexDirection:'column',alignItems:'center',textAlign:'center'}}>
+            {mfaState!=='success' && <div style={{width:44,height:44,borderRadius:22,background:HF.greenBg,display:'flex',alignItems:'center',justifyContent:'center',marginBottom:12}}>
+              {mfaChannel==='sms'
+                ? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={green} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+                : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={green} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              }
+            </div>}
+            {mfaState==='success' && <div style={{width:56,height:56,borderRadius:28,background:HF.greenBg,display:'flex',alignItems:'center',justifyContent:'center',marginBottom:16,animation:'pop 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards'}}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={green} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>}
+            <p style={{fontFamily:sans,fontSize:15,color:HF.textPrimary,margin:'0 0 12px',lineHeight:'22px'}}>
+              {mfaState==='success'?'Your address has been updated successfully.'
+                :mfaChannel==='sms'?<>Enter the 4-digit code we sent over SMS to <strong>+49 •••• ••7821</strong></>
+                :<>Enter the 4-digit code we sent to <strong>f*****@hellofresh.com</strong></>}
+            </p>
+            <OtpBoxes otp={otp} state={mfaState} inputRefs={inputRefs} onChange={handleOtp} onKeyDown={handleKd} onPaste={handlePaste} green={green} errorRed={HF.error}/>
+            {mfaState==='error' && <p style={{fontSize:14,color:HF.error,margin:'4px 0 12px'}}>That code isn't right. Try again.</p>}
+            {mfaState==='expired' && <p style={{fontSize:14,color:HF.error,margin:'4px 0 12px'}}>Your verification code is expired. Resend a new one.</p>}
+            <div style={{marginTop:4}}>
+              {mfaState==='idle' && <p style={{fontSize:13,color:HF.textTertiary,margin:0}}>Didn't receive the code? Resend in 00:30</p>}
+              {(mfaState==='error'||mfaState==='expired') && <button onClick={resend} style={{background:'none',border:'none',cursor:'pointer',fontFamily:sans,fontSize:14,fontWeight:700,color:HF.textPrimary}}>Resend a new code</button>}
+            </div>
+            {mfaState!=='success' && <ChannelSwitch channel={mfaChannel} onSwitch={switchCh}/>}
+          </div>
+        </>}
+      </div>
+    </div>
+  );
+}
+
+const SCREENS = { Hub, ReactivationAddress, AccountSettings, PlanSettings, PersonalInfo, ChangeEmail, ChangePassword, MfaVerify };
+
+function Root() {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 500);
+  useEffect(() => {
+    const h = () => setIsMobile(window.innerWidth < 500);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
+  const [screen, setScreen] = useState('Hub');
+  const [params, setParams] = useState({});
+  const goTo = (name, p = {}) => { setScreen(name); setParams(p); };
+  const Screen = SCREENS[screen] || Hub;
+
+  if (isMobile) {
+    return (
+      <NavCtx.Provider value={{ goTo, params }}>
+        <div style={{position:'fixed',inset:0,overflow:'hidden',background:'#fff'}}>
+          <Screen/>
+        </div>
+      </NavCtx.Provider>
+    );
+  }
+  return (
+    <NavCtx.Provider value={{ goTo, params }}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'center',width:'100vw',height:'100vh',background:'#111'}}>
+        <div style={{width:390,height:844,position:'relative',borderRadius:40,overflow:'hidden',boxShadow:'0 40px 120px rgba(0,0,0,0.7)',border:'8px solid #2a2a2a',background:'#000'}}>
+          <Screen/>
+        </div>
+      </div>
+    </NavCtx.Provider>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<Root/>);
+</script>
+</body>
+</html>
